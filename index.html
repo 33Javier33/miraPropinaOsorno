@@ -1,0 +1,2244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registro Personal de Montos</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#007bff"/>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+        --menu-width: 250px;
+        --primary-color: #007bff;
+        --secondary-color: #4CAF50;
+        --danger-color: #dc3545;
+        --success-color: #28a745;
+        --error-color: #dc3545;
+        --info-color: #17a2b8;
+        --edit-color: #ffc107;
+        
+        /* Light Theme */
+        --bg-main: #f0f2f5;
+        --bg-content: #ffffff;
+        --bg-accent: #eef7ff;
+        --text-primary: #222;
+        --text-secondary: #555;
+        --border-color: #ddd;
+        --shadow-color: rgba(0,0,0,0.05);
+        --user-chat-bg: var(--primary-color);
+    }
+
+    body.dark-mode {
+        /* Dark Theme */
+        --bg-main: #121212;
+        --bg-content: #1e1e1e;
+        --bg-accent: #2a2a3a;
+        --text-primary: #e0e0e0;
+        --text-secondary: #b0b0b0;
+        --border-color: #444;
+        --shadow-color: rgba(0,0,0,0.2);
+        --user-chat-bg: #0056b3;
+    }
+
+    body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        background-color: var(--bg-main);
+        margin: 0;
+        color: var(--text-primary);
+        transition: margin-left 0.3s ease, background-color 0.3s, color 0.3s;
+    }
+    
+    .menu-toggle {
+        position: fixed;
+        top: 15px;
+        left: 15px;
+        z-index: 1002;
+        width: 40px;
+        height: 40px;
+        background-color: var(--secondary-color);
+        border: none;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+    }
+    .menu-toggle span { display: block; width: 22px; height: 2px; background-color: white; margin: 2px 0; transition: all 0.3s ease; }
+    .side-menu.open + .main-container .menu-toggle { left: calc(var(--menu-width) + 15px); }
+    .menu-toggle.active span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .menu-toggle.active span:nth-child(2) { opacity: 0; }
+    .menu-toggle.active span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+    .side-menu {
+        position: fixed; top: 0; left: 0; width: var(--menu-width); height: 100%;
+        background-color: #2c3e50; z-index: 1001; transform: translateX(-100%);
+        transition: transform 0.3s ease; display: flex; flex-direction: column;
+        padding-top: 20px; box-shadow: 5px 0 15px rgba(0,0,0,0.1);
+    }
+    .side-menu.open { transform: translateX(0); }
+    .side-menu .menu-header { color: white; font-size: 1.4em; font-weight: 700; text-align: center; padding: 20px 10px; border-bottom: 1px solid #4a627a; }
+    .side-menu a { color: white; text-decoration: none; padding: 15px 20px; display: block; transition: background-color 0.2s ease, padding-left 0.2s ease; border-bottom: 1px solid #3e5268; }
+    .side-menu a:hover, .side-menu a.active-link { background-color: var(--secondary-color); padding-left: 25px; }
+    
+    .main-container { transition: margin-left 0.3s ease; padding: 20px; }
+    .content-panel { display: none; }
+    .content-panel.active { display: block; animation: fadeIn 0.5s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    @media (min-width: 992px) {
+        body { margin-left: var(--menu-width); }
+        .menu-toggle { display: none; }
+        .side-menu { transform: translateX(0); }
+    }
+    
+    .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding-left: 50px;
+    }
+     @media (min-width: 992px) {
+        .app-header {
+            padding-left: 0;
+        }
+    }
+    .app-header h1 {
+        margin: 0;
+        font-size: 1.8em;
+    }
+    .user-info-cluster {
+        text-align: right;
+    }
+
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 2000; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+    .toast { background-color: var(--success-color); color: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 1em; opacity: 0; transform: translateX(100%); transition: all 0.4s ease; }
+    .toast.show { opacity: 1; transform: translateX(0); }
+    .toast.error { background-color: var(--error-color); }
+    .toast.info { background-color: var(--info-color); }
+
+    h1 { text-align: center; margin-bottom: 20px; font-size: 2em; }
+    section { margin-bottom: 30px; background: var(--bg-content); padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px var(--shadow-color); }
+    h2 { margin-top: 0; margin-bottom: 15px; font-size: 1.7em; border-bottom: 2px solid var(--bg-main); padding-bottom: 10px; }
+    h3 { margin-top: 0; margin-bottom: 10px; font-size: 1.3em; color: var(--text-primary); }
+    #totalDiario { font-weight: bold; font-size: 1.5em; margin: 15px 0; color: var(--primary-color); text-align: center; }
+    form { display: flex; flex-wrap: wrap; gap: 10px; }
+    input, select, button, textarea { padding: 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1em; background-color: var(--bg-content); color: var(--text-primary); }
+    input:focus, textarea:focus { border-color: var(--secondary-color); outline: none; }
+    button { background-color: var(--secondary-color); color: #fff; border: none; font-weight: bold; cursor: pointer; flex-grow: 1; display: inline-flex; justify-content: center; align-items: center; gap: 8px; }
+    button:hover { opacity: 0.9; }
+    button:disabled { background-color: #aaa; cursor: not-allowed; }
+    .reset-button { background-color: var(--danger-color); }
+    .edit-button-modal { background-color: var(--edit-color); color: #212529;}
+    #importarDesdeSheetsBtn { background-color: var(--info-color); }
+    .logout-button { background-color: var(--danger-color); font-weight: normal; padding: 8px 12px; font-size: 0.9em; flex-grow: 0; }
+    #tarjetasMontos { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+    .tarjeta { background-color: var(--bg-content); border-radius: 12px; box-shadow: 0 4px 12px var(--shadow-color); padding: 15px; border-left: 4px solid var(--primary-color); }
+    .tarjeta h3 { margin: 0 0 8px 0; font-size: 1.1em; cursor: pointer; display: flex; justify-content: space-between; }
+    .tarjeta h3 .total-in-header { font-weight: bold; color: var(--primary-color); }
+    .tarjeta h3::after { content: '▼'; transition: transform 0.2s ease-in-out; }
+    .tarjeta.collapsed h3::after { transform: rotate(-90deg); }
+    .tarjeta.collapsed .montos-list { display: none; }
+    .montos-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 8px; margin-top: 10px; }
+    .monto-item { background-color: var(--bg-main); padding: 8px; border-radius: 6px; font-size: 0.9em; display: flex; justify-content: space-between; align-items: center; }
+    .delete-button { background: none; border: none; font-size: 1.2em; color: var(--danger-color); cursor: pointer; }
+    
+    .retiro-container, .retiro-container-pt { background-color: var(--bg-accent); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .calculation-item { margin-bottom: 12px; font-size: 1.1em; display: flex; justify-content: space-between; align-items: center; }
+    .calculation-item strong { color: var(--text-primary); }
+    .final-calculation { border-top: 2px solid var(--border-color); padding-top: 15px; margin-top: 15px; }
+    .total-result { font-size: 1.8em; font-weight: bold; color: var(--primary-color); }
+    .retiro-actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .anticipos-list-container { margin-top: 10px; max-height: 160px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; background-color: var(--bg-content); }
+    .anticipo-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 5px; border-bottom: 1px solid var(--border-color); font-size: 0.95em; }
+    .anticipo-item:last-child { border-bottom: none; }
+    .anticipo-item .actions { display: flex; gap: 8px; }
+    .anticipo-item-btn { background: none; border: none; cursor: pointer; font-size: 1.2em; padding: 0 5px; color: var(--text-secondary); }
+    .delete-anticipo-btn { color: var(--danger-color); }
+    .edit-anticipo-btn { color: var(--edit-color); }
+    
+    .part-time-layout { display: flex; flex-wrap: wrap; gap: 20px; }
+    .calendar-section { flex: 1; min-width: 300px; }
+    .calculation-section-pt { flex: 1; min-width: 300px; }
+    .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; }
+    .calendar-header button { padding: 5px 10px; background-color: var(--bg-accent); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; flex: 0; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+    .day-name { font-weight: bold; color: var(--text-secondary); padding-bottom: 5px; }
+    .day { padding: 8px; border-radius: 4px; background-color: var(--bg-content); cursor: pointer; border: 1px solid var(--border-color); }
+    .day:hover { background-color: var(--bg-accent); }
+    .day.marked { background-color: var(--success-color); color: #fff; font-weight: bold; }
+    .day.empty { background-color: transparent; border: none; cursor: default; }
+
+    .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background-color: var(--bg-content); padding: 25px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); width: 90%; max-width: 400px; display: flex; flex-direction: column; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .modal-header h4 { margin: 0; font-size: 1.3em; }
+    .modal-close-btn { background: none; border: none; font-size: 1.8em; cursor: pointer; padding: 0 5px; color: var(--text-secondary); }
+    .modal-body { flex-grow: 1; overflow-y: auto; }
+    .modal-body label { display: block; margin-bottom: 5px; font-weight: bold; }
+    .modal-body input { width: 100%; box-sizing: border-box; margin-bottom: 10px; padding: 10px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+    
+    #statsModal .modal-content {
+        max-width: 90%;
+        width: 800px;
+        height: 80vh;
+    }
+    @media (max-width: 820px) {
+      #statsModal .modal-content {
+          width: 95%;
+          max-width: 95%;
+      }
+    }
+    
+    .password-wrapper { position: relative; width: 100%; flex-grow: 1; }
+    .password-wrapper input { width: 100%; box-sizing: border-box; padding-right: 40px; }
+    .password-toggle-icon { position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer; color: var(--text-secondary); }
+
+    .quick-access-container { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-top: 10px; }
+    .quick-access-user { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; background-color: var(--bg-main); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); transition: all 0.2s ease; min-width: 80px; }
+    .quick-access-user:hover { transform: translateY(-3px); box-shadow: 0 4px 8px var(--shadow-color); border-color: var(--primary-color); }
+    .quick-access-avatar { width: 50px; height: 50px; border-radius: 50%; background-color: var(--secondary-color); color: white; display: flex; justify-content: center; align-items: center; font-size: 1.8em; font-weight: bold; }
+    .quick-access-name { font-size: 0.9em; font-weight: 500; }
+    .delete-user-btn { position: absolute; top: -5px; right: -5px; width: 24px; height: 24px; background-color: #ddd; color: #555; border: 2px solid var(--bg-content); border-radius: 50%; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; line-height: 1; opacity: 0.7; transition: all 0.2s ease; padding: 0; flex-grow: 0; }
+    .delete-user-btn:hover { background-color: var(--danger-color); color: white; transform: scale(1.1); opacity: 1; }
+    .forgot-password-link { text-align: center; display: block; margin-top: 15px; color: var(--primary-color); text-decoration: none; font-size: 0.9em; }
+    .forgot-password-link:hover { text-decoration: underline; }
+    #recoveryResult { padding: 10px; border-radius: 6px; display: none; margin-top: 15px; font-weight: bold; word-break: break-word; }
+    #recoveryResult.success { background-color: #e8f5e9; color: #2e7d32; display: block; }
+    #recoveryResult.error { background-color: #ffebee; color: #c62828; display: block; }
+
+    footer { text-align: center; padding: 20px; margin-top: 30px; color: #777; font-size: 0.9em; border-top: 1px solid var(--border-color); }
+
+    .user-data-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 20px; }
+    .data-item { background-color: var(--bg-main); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .data-item-label { font-weight: bold; color: var(--text-secondary); display: block; margin-bottom: 5px; font-size: 0.9em; }
+    .data-item-value { font-size: 1.2em; color: var(--primary-color); display: flex; align-items: center; }
+    .edit-btn-inline { background: none; border: none; cursor: pointer; color: var(--primary-color); margin-left: 10px; font-size: 0.9em; padding: 5px; flex-grow: 0; }
+    .edit-btn-inline:hover { color: var(--secondary-color); }
+    #changePasswordBtn { width: 100%; margin-top: 20px; background-color: var(--edit-color); color: #212529; }
+
+    .help-button { position: fixed; top: 15px; right: 15px; width: 40px; height: 40px; background-color: var(--info-color); color: white; border: none; border-radius: 50%; font-size: 1.5em; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.15); z-index: 1002; display: flex; justify-content: center; align-items: center; }
+    .help-panel { position: fixed; top: 0; right: 0; width: 350px; height: 100%; background-color: var(--bg-content); box-shadow: -5px 0 15px var(--shadow-color); transform: translateX(100%); transition: transform 0.3s ease-in-out; z-index: 1010; display: flex; flex-direction: column; }
+    .help-panel.open { transform: translateX(0); }
+    .help-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+    .help-header h2 { margin: 0; font-size: 1.5em; border: none; padding: 0; }
+    .close-help-btn { background: none; border: none; font-size: 1.8em; cursor: pointer; padding: 0 5px; color: var(--text-secondary); }
+    .help-content { padding: 20px; overflow-y: auto; flex-grow: 1; }
+    .help-content h3 { text-align: left; margin-top: 20px; border-bottom: 2px solid var(--primary-color); padding-bottom: 5px; font-size: 1.2em; }
+    .help-content p, .help-content li { line-height: 1.6; font-size: 0.95em; }
+    .help-content .note { background-color: var(--bg-accent); border-left: 4px solid var(--primary-color); padding: 15px; margin: 15px 0; border-radius: 4px; font-size: 0.9em; }
+    .help-content .formula { text-align: center; font-size: 1em; margin: 10px 0; padding: 10px; background-color: var(--bg-main); border-radius: 4px; font-weight: bold; }
+    .help-content i { color: var(--secondary-color); margin-right: 5px; }
+    @media (max-width: 480px) { .help-panel { width: 100%; } }
+    .help-content-section { display: none; }
+    .help-content-section.active-help { display: block; }
+
+    .fab-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; align-items: center; gap: 15px; }
+    .fab { width: 50px; height: 50px; background-color: var(--secondary-color); color: white; border: none; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5em; box-shadow: 0 4px 12px rgba(0,0,0,0.15); cursor: pointer; transition: transform 0.2s ease, background-color 0.2s; position: relative; }
+    .fab:hover { transform: scale(1.1); }
+    
+    #notification-fab {
+        background-color: var(--danger-color);
+        animation: blink 1.5s infinite ease-in-out;
+    }
+    #notification-fab:hover {
+        background-color: #c82333;
+    }
+    @keyframes blink {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.1); opacity: 0.8; }
+    }
+    #note-notification-count {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background-color: var(--primary-color);
+        color: white;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        font-size: 12px;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border: 2px solid var(--bg-content);
+    }
+    
+    .loading-indicator {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 40px;
+        gap: 10px;
+        color: var(--text-secondary);
+        font-size: 1.1em;
+        animation: fadeIn 0.5s;
+    }
+    .loading-indicator i {
+        font-size: 1.5em;
+    }
+
+    #admin-notes-container { display: flex; flex-direction: column; gap: 15px; max-height: 50vh; overflow-y: auto; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 20px;}
+    .note-card { background-color: var(--bg-accent); border-radius: 8px; padding: 15px; border-left: 5px solid var(--primary-color); max-width: 80%; }
+    .note-header { font-size: 0.85em; color: var(--text-secondary); border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 10px; }
+    .note-header .author { font-weight: bold; color: var(--primary-color); text-transform: capitalize; }
+    .note-body { font-size: 1em; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+    
+    .note-card.user-note {
+        align-self: flex-end;
+        border-left: none;
+        border-right: 5px solid var(--secondary-color);
+        background-color: #e8f5e9;
+    }
+    body.dark-mode .note-card.user-note {
+        background-color: #2a3b2b;
+    }
+    
+    #responseForm textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 80px; }
+    #sendResponseBtn { width: 100%; }
+
+    /* Login Form Layout Adjustments */
+    #loginForm {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    .form-row, .form-row-date {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+    }
+    
+    #loginForm > input,
+    #loginForm > .password-wrapper,
+    #loginForm > button,
+    #loginForm > a {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .form-row > input,
+    .form-row > select,
+    .form-row-date > select,
+    .form-row-date > input {
+        flex: 1;
+        min-width: 0; 
+    }
+     .form-row-date > input {
+        flex: 1.5; 
+    }
+    .form-row-date > label {
+        flex-grow: 0;
+        flex-shrink: 0; 
+        align-self: center;
+        font-size: 0.9em;
+        color: var(--text-secondary);
+    }
+
+    /* --- Statistics Styles (used inside modal) --- */
+    .stat-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
+    }
+    .stat-card {
+        background-color: var(--bg-accent);
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .stat-card .label {
+        font-size: 0.9em;
+        color: var(--text-secondary);
+        margin-bottom: 8px;
+        display: block;
+    }
+    .stat-card .value {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    .stat-card .value.projection {
+        color: var(--secondary-color);
+    }
+    .stat-card .disclaimer {
+        font-size: 0.75em;
+        margin-top: 10px;
+        color: var(--text-secondary);
+    }
+    .chart-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+    .chart-controls button {
+        flex-grow: 0;
+        padding: 8px 16px;
+    }
+    .chart-controls button.active {
+        background-color: var(--primary-color);
+    }
+    .chart-container {
+        position: relative;
+        height: 40vh;
+        min-height: 300px;
+        width: 100%;
+    }
+
+  </style>
+</head>
+<body>
+
+<nav id="sideMenu" class="side-menu"></nav>
+
+<div id="mainContainer" class="main-container">
+    <button id="menuToggle" class="menu-toggle" style="display: none;">
+        <span></span><span></span><span></span>
+    </button>
+    
+    <button id="help-btn" class="help-button">?</button>
+    <div id="help-panel" class="help-panel">
+        <div class="help-header">
+            <h2 id="help-title">Ayuda</h2>
+            <button id="close-help-btn" class="close-help-btn">&times;</button>
+        </div>
+        <div class="help-content">
+            <div id="help-content-login" class="help-content-section">
+                <h3>¿Cómo Empezar?</h3>
+                <p>Bienvenido/a al registro personal. Aquí te explicamos cómo acceder.</p>
+                <div class="note">
+                    <strong>Si es tu Primera Vez (Registro):</strong>
+                    <ol>
+                        <li>Completa <strong>todos</strong> los campos del formulario (nombre, tipo de contrato, puntos, etc.).</li>
+                        <li>Crea una contraseña segura.</li>
+                        <li>Presiona "Ingresar o Registrar". Tu cuenta se creará y se te pedirá un número de teléfono para protegerla.</li>
+                    </ol>
+                </div>
+                <div class="note">
+                    <strong>Si ya Tienes una Cuenta (Ingreso):</strong>
+                    <ul>
+                        <li>Usa el "Acceso Rápido" para rellenar tus datos o ingrésalos manually.</li>
+                        <li>Escribe tu contraseña y presiona "Ingresar o Registrar".</li>
+                    </ul>
+                </div>
+                 <div class="note">
+                    <strong>¿Olvidaste tu Contraseña?</strong>
+                    <p>Haz clic en el enlace "¿Olvidaste tu contraseña?", ingresa el número de teléfono que registraste y sigue los pasos para crear una nueva.</p>
+                </div>
+            </div>
+
+            <div id="help-content-main" class="help-content-section">
+                <h3>Explicación de las Secciones</h3>
+                <p>La aplicación se divide en varias partes clave para que organices tu información:</p>
+                <ul>
+                    <li><strong>Retiro de Propina:</strong> ¡La nueva pantalla principal! Aquí ves el resultado final de todos los cálculos según tu tipo de contrato (Planta o Part-Time). Es el resumen que te dice cuánto debes retirar. Desde aquí puedes abrir las <strong>Estadísticas</strong> para ver gráficos y proyecciones.</li>
+                    <li><strong>Montos por Noche:</strong> En esta sección puedes ver el desglose de todas las propinas recaudadas cada día del mes. Los datos se importan automáticamente y aquí puedes revisarlos en detalle.</li>
+                    <li><strong>Mis Datos:</strong> Aquí puedes verificar que tu información personal sea correcta, como tu nombre, tipo de contrato y, lo más importante, la <strong>cantidad de puntos</strong> que tienes asignados. También puedes cambiar tu contraseña y realizar respaldos de datos desde aquí.</li>
+                    <li><strong>Notas Admin:</strong> Un canal de comunicación directo para ver los mensajes del administrador y enviar respuestas.</li>
+                </ul>
+
+                <h3>Conceptos Clave del Cálculo</h3>
+                <p>Para entender los cálculos, primero debes conocer estos términos:</p>
+                <ul>
+                    <li><strong>Puntos:</strong> Son los puntos que tienes asignados personalmente. Puedes editarlos desde la sección "Mis Datos".</li>
+                    <li><strong>Total Recaudado:</strong> Es la suma de todos los montos de propina del mes.</li>
+                    <li><strong>Divisor:</strong> Es el total de puntos que participan en la repartición (General para Planta, Personal para Part-Time).</li>
+                    <li><strong>Anticipos:</strong> Dinero que retiraste por adelantado y que se descuenta del total.</li>
+                </ul>
+
+                <h3>Detalle de los Cálculos (Personal de Planta)</h3>
+                <div class="note">
+                    <p><strong>Paso A: Calcular el Valor por Punto</strong><br>La app toma el "Total Recaudado" del mes y lo divide por el "Divisor General".</p>
+                    <div class="formula">Valor por Punto = Total Recaudado / Divisor General</div>
+
+                    <p><strong>Paso B: Calcular tu Subtotal</strong><br>Luego, multiplica ese "Valor por Punto" por "Mis Puntos".</p>
+                    <div class="formula">Subtotal = Valor por Punto × Mis Puntos</div>
+
+                    <p><strong>Paso C: Calcular el Total Final</strong><br>Finalmente, a tu subtotal se le restan los "Anticipos".</p>
+                    <div class="formula">Total a Retirar = Subtotal - Total Anticipos</div>
+                </div>
+
+                <h3>Detalle de los Cálculos (Personal Part-Time)</h3>
+                <div class="note">
+                    <p><strong>Paso A: Marcar Días y Calcular Pozo</strong><br>En el calendario, debes marcar los días que trabajaste para que la app sume las propinas de <strong>solo esos días</strong> en tu "Pozo Individual".</p>
+
+                    <p><strong>Paso B: Calcular el Valor por Punto</strong><br>La app divide tu "Pozo Individual" por tu "Divisor Personal". Este divisor corresponde al divisor registrado en el <strong>último día</strong> que marcaste en el calendario.</p>
+                    <div class="formula">Valor por Punto = Pozo Individual / Divisor Personal (Último Día)</div>
+
+                    <p><strong>Paso C y D: Calcular Subtotal y Total Final</strong><br>Finalmente, el "Valor por Punto" se multiplica por "Mis Puntos" y se restan tus "Anticipos".</p>
+                </div>
+
+                <h3><i class="fas fa-comments"></i> Notas y Comunicación</h3>
+                <div class="note">
+                    <p>La sección <strong>"Notas Admin"</strong> es tu canal directo para comunicarte con la administración.</p>
+                    <ul>
+                        <li><strong>Enviar Mensajes:</strong> Escribe tu consulta o respuesta en el cuadro de texto y presiona "Enviar".</li>
+                        <li><strong>Notificaciones:</strong> Cuando recibas un mensaje nuevo del administrador, verás un <strong>icono de nota parpadeante</strong> <i class="fas fa-envelope-open-text" style="color: var(--danger-color);"></i> en la esquina inferior derecha, con un número que indica cuántos mensajes nuevos tienes.</li>
+                        <li><strong>Marcar como Leído:</strong> Para quitar la notificación, simplemente entra a la sección "Notas Admin" desde el menú.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="login-container">
+      <section id="loginSection">
+        <h2>Ingresar a tu Registro</h2>
+        
+        <section id="quickAccessSection" style="display: none; padding: 10px; box-shadow: none;">
+            <h4 style="text-align: center; margin:0 0 15px 0; font-size: 1em; color: #555;">Acceso Rápido</h4>
+            <div id="quickAccessUsers" class="quick-access-container">
+            </div>
+        </section>
+        <form id="loginForm">
+            <div class="form-row">
+                <input type="text" id="loginNombre" placeholder="Nombre" required />
+                <input type="text" id="loginApellido" placeholder="Apellido" required />
+            </div>
+            <div class="form-row">
+                <select id="loginTipoContrato" required>
+                    <option value="">Tipo de Contrato</option>
+                    <option value="Planta">Planta</option>
+                    <option value="Part Time">Part Time</option>
+                </select>
+                <select id="loginSeccion" required>
+                    <option value="">Selecciona tu Sección</option>
+                    <option value="Mesas">Mesas</option>
+                    <option value="Máquinas">Máquinas</option>
+                    <option value="Bóveda">Bóveda</option>
+                    <option value="Otros">Otros</option>
+                </select>
+            </div>
+            <div class="form-row-date">
+              <label for="loginDia">F. Ingreso:</label>
+              <select id="loginDia" required>
+                <option value="">Día</option>
+                <script>for(let i=1;i<=31;i++)document.write(`<option value="${i}">${i}</option>`);</script>
+              </select>
+              <select id="loginMes" required>
+                <option value="">Mes</option>
+                <script>for(let i=1;i<=12;i++)document.write(`<option value="${i}">${i}</option>`);</script>
+              </select>
+              <input type="number" id="loginAnio" placeholder="Año" required />
+            </div>
+            <input type="number" id="loginPuntos" placeholder="Cantidad de Puntos" required />
+            <div class="password-wrapper">
+              <input type="password" id="loginPassword" placeholder="Contraseña" required />
+              <i class="fas fa-eye password-toggle-icon"></i>
+            </div>
+            <button type="submit">Ingresar o Registrar</button>
+            <a href="#" id="forgotPasswordLink" class="forgot-password-link">¿Olvidaste tu contraseña?</a>
+        </form>
+      </section>
+    </div>
+
+    <div id="main-content" style="display: none;">
+      <div class="app-header">
+        <h1>Registro Personal</h1>
+        <div class="user-info-cluster">
+            <span id="userInfo"></span>
+            <button id="logoutBtn" class="logout-button">Cerrar Sesión</button>
+        </div>
+      </div>
+      
+      <section id="retirosPropinaSection" class="content-panel">
+          <h2 id="titulo-retiro">Retiro de Propina</h2>
+          <div id="vistaPlanta" style="display: none;">
+              <div class="retiro-container">
+                  <div class="calculation-item"><strong>Mis Puntos:</strong> <span id="puntosUsuarioDisplayPlanta">0</span></div>
+                  <hr>
+                  <div class="calculation-item"><strong>Total Recaudado:</strong> <span id="totalMontoDividirPlanta">$0</span></div>
+                  <div class="calculation-item"><strong>Divisor Registrado (Último):</strong> <span id="divisorDisplayPlanta">No registrado</span></div>
+                  <div class="calculation-item" style="color: var(--info-color); font-weight: bold;"><strong>Valor por Punto:</strong> <span id="valorPorPuntoDisplayPlanta">$0</span></div>
+                  <hr>
+                  <div class="calculation-item"><strong>Subtotal (Puntos x Valor):</strong> <span id="subtotalDisplayPlanta">$0</span></div>
+                  <div class="calculation-item"><strong>Total Anticipos:</strong> <span id="anticiposDisplayPlanta">-$0</span></div>
+                  <div id="anticipos-list-container-planta" class="anticipos-list-container"></div>
+                  <div class="calculation-item final-calculation">
+                      <strong class="total-result">Total a Retirar:</strong> 
+                      <span id="resultadoFinalPlanta" class="total-result">$0</span>
+                  </div>
+              </div>
+          </div>
+          <div id="vistaPartTime" style="display: none;">
+              <div class="part-time-layout">
+                  <div class="calendar-section">
+                      <h4>Marca tus días trabajados:</h4>
+                      <div id="calendar-container"></div>
+                  </div>
+                  <div class="calculation-section-pt">
+                      <div class="retiro-container-pt">
+                          <div class="calculation-item"><strong>Mis Puntos:</strong> <span id="puntosUsuarioDisplayPT">0</span></div>
+                          <hr>
+                          <div class="calculation-item"><strong>Días trabajados:</strong> <span id="diasTrabajadosDisplayPT">0</span></div>
+                          <div class="calculation-item"><strong>Pozo Individual:</strong> <span id="pozoIndividualDisplayPT">$0</span></div>
+                          <div class="calculation-item">
+                               <strong title="Corresponde al divisor del último día de trabajo que marcaste en el calendario.">Divisor Personal (Auto):</strong>
+                               <span id="divisorDisplayPT">0</span>
+                          </div>
+                          <div class="calculation-item" style="color: var(--info-color); font-weight: bold;"><strong>Valor por Punto:</strong> <span id="valorPorPuntoDisplayPT">$0</span></div>
+                          <hr>
+                          <div class="calculation-item"><strong>Subtotal:</strong> <span id="subtotalDisplayPT">$0</span></div>
+                          <div class="calculation-item"><strong>Total Anticipos:</strong> <span id="anticiposDisplayPT">-$0</span></div>
+                          <div id="anticipos-list-container-pt" class="anticipos-list-container"></div>
+                          <div class="calculation-item final-calculation">
+                              <strong class="total-result">Total a Retirar:</strong> 
+                              <span id="resultadoFinalPT" class="total-result">$0</span>
+                          </div>
+                          <button id="registrarDivisorPTBtn" style="width:100%; margin-top:10px; display: none;">Editar Divisor Personal</button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+          <div class="retiro-actions">
+              <button id="openStatsModalBtn" style="background-color: var(--primary-color);">Ver Estadísticas</button>
+              <button id="registrarAnticipoBtn">Registrar Anticipo</button>
+              <button id="resetMesBtn" class="reset-button">Reiniciar Mes</button>
+          </div>
+      </section>
+
+      <section id="montosSection" class="content-panel">
+        <h2>Montos por Noche</h2>
+        <button id="importarDesdeSheetsBtn" style="width: 100%; margin-bottom: 15px;">Sincronizar con Sheets</button>
+        <div id="totalDiario">Total recaudado: $0</div>
+        <div id="tarjetasMontos"></div>
+      </section>
+
+      <section id="datosUsuarioSection" class="content-panel">
+          <h2>Mis Datos</h2>
+          <div class="user-data-container">
+              <div class="data-item">
+                  <span class="data-item-label">Nombre Completo</span>
+                  <span id="userDataNombre" class="data-item-value"></span>
+              </div>
+              <div class="data-item">
+                  <span class="data-item-label">Tipo de Contrato</span>
+                  <span id="userDataContrato" class="data-item-value"></span>
+              </div>
+              <div class="data-item">
+                  <span class="data-item-label">Puntos Asignados</span>
+                  <span id="userDataPuntos" class="data-item-value">
+                      <span id="puntosValueDisplay"></span>
+                      <button id="editPuntosBtn" class="edit-btn-inline" title="Editar Puntos">✏️</button>
+                  </span>
+              </div>
+              <div class="data-item">
+                  <span class="data-item-label">Fecha de Ingreso</span>
+                  <span id="userDataFechaIngreso" class="data-item-value"></span>
+              </div>
+          </div>
+          <button id="changePasswordBtn">Cambiar Contraseña</button>
+          
+          <div style="margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+              <h3>Respaldo y Recuperación</h3>
+              <p style="font-size: 0.9em; color: var(--text-secondary);">Guarda una copia de seguridad de todos los datos de la aplicación (incluyendo todos los usuarios registrados en este dispositivo) o restaura desde un archivo previo.</p>
+              <div style="display: flex; gap: 10px; margin-top: 15px;">
+                  <button id="exportDataBtn" style="background-color: var(--info-color);">
+                      <i class="fas fa-download"></i> Exportar Datos (JSON)
+                  </button>
+                  <button id="importDataBtn" style="background-color: var(--edit-color); color: #212529;">
+                      <i class="fas fa-upload"></i> Importar Datos (JSON)
+                  </button>
+              </div>
+          </div>
+      </section>
+      
+      <section id="notasSection" class="content-panel">
+          <h2>Comunicación con Administración</h2>
+          <div id="admin-notes-container">
+              </div>
+          <form id="responseForm" style="margin-top: 20px;">
+              <textarea id="responseMessage" placeholder="Escribe tu respuesta o consulta aquí..." rows="4"></textarea>
+              <button type="button" id="sendResponseBtn">Enviar Respuesta</button>
+          </form>
+      </section>
+    </div> 
+</div>
+
+<div class="fab-container">
+    <button id="notification-fab" class="fab" title="Nuevas Notas" style="display: none;">
+        <i class="fas fa-envelope-open-text"></i>
+        <span id="note-notification-count"></span>
+    </button>
+    <button id="theme-toggle" class="fab" title="Cambiar Tema">
+        <i class="fas fa-moon"></i>
+    </button>
+</div>
+
+
+<footer>
+    CarlosPN Interactive®
+</footer>
+
+<div id="toast-container"></div>
+
+<div id="statsModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h4>Estadísticas y Proyecciones</h4>
+            <button id="closeStatsModalBtn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="stat-cards" id="statCardsContainer"></div>
+            <div class="chart-controls">
+                <button id="dailyViewBtn" class="active">Vista Diaria</button>
+                <button id="weeklyViewBtn">Vista Semanal</button>
+            </div>
+            <div class="chart-container">
+                <canvas id="tipChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="addAnticipoModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>Registrar Anticipo</h4></div>
+        <div class="modal-body">
+            <label for="addAnticipoMontoInput">Monto:</label>
+            <input type="text" id="addAnticipoMontoInput" inputmode="numeric" required />
+            <label for="addAnticipoFechaInput">Fecha:</label>
+            <input type="date" id="addAnticipoFechaInput" required />
+        </div>
+        <div class="modal-footer">
+            <button class="reset-button" id="cancelAddAnticipoBtn">Cancelar</button>
+            <button id="saveAddAnticipoBtn">Guardar</button>
+        </div>
+    </div>
+</div>
+<div id="editAnticipoModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>Editar Anticipo</h4></div>
+        <div class="modal-body">
+            <label for="editAnticipoMontoInput">Monto:</label>
+            <input type="text" id="editAnticipoMontoInput" inputmode="numeric" required />
+            <label for="editAnticipoFechaInput">Fecha:</label>
+            <input type="date" id="editAnticipoFechaInput" required />
+        </div>
+        <div class="modal-footer">
+            <button class="reset-button" id="cancelEditAnticipoBtn">Cancelar</button>
+            <button class="edit-button-modal" id="saveEditAnticipoBtn">Guardar Cambios</button>
+        </div>
+    </div>
+</div>
+<div id="divisorModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>Registrar Divisor General</h4></div>
+        <div class="modal-body">
+            <label for="divisorInput">Divisor:</label>
+            <input type="text" id="divisorInput" inputmode="numeric" required />
+        </div>
+        <div class="modal-footer">
+            <button class="reset-button" id="cancelDivisorBtn">Cancelar</button>
+            <button id="saveDivisorBtn">Guardar</button>
+        </div>
+    </div>
+</div>
+<div id="divisorPTModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>Editar Divisor Personal</h4></div>
+        <div class="modal-body">
+            <label for="divisorPTInput">Divisor:</label>
+            <input type="text" id="divisorPTInput" inputmode="numeric" required />
+        </div>
+        <div class="modal-footer">
+            <button class="reset-button" id="cancelDivisorPTBtn">Cancelar</button>
+            <button id="saveDivisorPTBtn">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div id="phoneModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>¡Bienvenido(a)!</h4></div>
+        <div class="modal-body">
+            <p>Para proteger tu cuenta, por favor ingresa tu número de teléfono. Lo usaremos para cambiar tu contraseña si la olvidas.</p>
+            <label for="phoneInput">Número de Teléfono:</label>
+            <input type="tel" id="phoneInput" placeholder="Ej: 912345678" required />
+        </div>
+        <div class="modal-footer">
+            <button id="savePhoneBtn">Guardar y Continuar</button>
+        </div>
+    </div>
+</div>
+<div id="forgotPasswordModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>Cambiar Contraseña</h4></div>
+        <div class="modal-body">
+            <div id="verifyPhoneContainer">
+                <p>Ingresa tu número de teléfono para verificar tu identidad.</p>
+                <label for="recoverPhoneInput">Número de Teléfono:</label>
+                <input type="tel" id="recoverPhoneInput" placeholder="Tu número de teléfono" required />
+                 <div id="recoveryResult"></div>
+            </div>
+            <div id="newPasswordContainer" style="display: none;">
+                <p>Verificación exitosa. Ahora puedes establecer tu nueva contraseña.</p>
+                <label for="newPasswordInput">Nueva Contraseña:</label>
+                <div class="password-wrapper">
+                    <input type="password" id="newPasswordInput" required />
+                    <i class="fas fa-eye password-toggle-icon"></i>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="reset-button" id="cancelForgotBtn">Cancelar</button>
+            <button id="verifyPhoneBtn">Verificar</button>
+            <button id="saveNewPasswordBtn" style="display: none;">Guardar Nueva Contraseña</button>
+        </div>
+    </div>
+</div>
+<div id="changePasswordModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>Actualizar Contraseña</h4></div>
+        <div class="modal-body">
+             <label for="newPasswordLoggedInInput">Ingresa tu nueva contraseña:</label>
+             <div class="password-wrapper">
+                <input type="password" id="newPasswordLoggedInInput" required />
+                <i class="fas fa-eye password-toggle-icon"></i>
+             </div>
+        </div>
+        <div class="modal-footer">
+            <button class="reset-button" id="cancelChangePasswordBtn">Cancelar</button>
+            <button id="saveNewPasswordLoggedInBtn">Guardar Cambios</button>
+        </div>
+    </div>
+</div>
+
+<div id="editPuntosModal" class="modal-backdrop" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header"><h4>Editar Puntos Asignados</h4></div>
+        <div class="modal-body">
+            <label for="editPuntosInput">Nueva cantidad de puntos:</label>
+            <input type="number" id="editPuntosInput" required />
+        </div>
+        <div class="modal-footer">
+            <button class="reset-button" id="cancelEditPuntosBtn">Cancelar</button>
+            <button id="saveEditPuntosBtn">Guardar Puntos</button>
+        </div>
+    </div>
+</div>
+
+<input type="file" id="importFileInput" style="display: none;" accept="application/json">
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- URLs de los scripts ---
+    const SCRIPT_URL_NOTAS = 'https://script.google.com/macros/s/AKfycbyKOYiSV7b2Kb0GBNCvRbACSP3qmX71FIepWO1hJxZQ2kqNClxWi2-o1J4u6gzRdlWCaQ/exec';
+    const SCRIPT_URL_RECAUDACION_EXTERNA = 'https://script.google.com/macros/s/AKfycbyKOYiSV7b2Kb0GBNCvRbACSP3qmX71FIepWO1hJxZQ2kqNClxWi2-o1J4u6gzRdlWCaQ/exec';
+    const SCRIPT_URL_RECAUDACION = 'https://script.google.com/macros/s/AKfycbyKOYiSV7b2Kb0GBNCvRbACSP3qmX71FIepWO1hJxZQ2kqNClxWi2-o1J4u6gzRdlWCaQ/exec'; 
+    const SCRIPT_URL_LOGIN = 'https://script.google.com/macros/s/AKfycbwDCr1oBAA8zQfbNj5XN2iaI1rjXqrYf8bsKx2LOnfMw3MAOMAw6WnO7ZXK-gF-vqj0/exec';
+
+    // --- Lógica para Cierre de Sesión al Salir de la App ---
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && loggedInUser) {
+        logout();
+      }
+    });
+
+    // --- Función de Cierre de Sesión ---
+    function logout() {
+        if (localStorage.getItem('loggedInUser')) {
+            showToast('Se ha cerrado la sesión por seguridad.', 'info');
+            if (notesInterval) clearInterval(notesInterval);
+            if (sheetsInterval) clearInterval(sheetsInterval);
+            localStorage.removeItem('loggedInUser');
+            loggedInUser = null;
+            setTimeout(() => location.reload(), 1500);
+        }
+    }
+    
+    // --- Variables globales y de estado ---
+    const loginContainer = document.getElementById('login-container');
+    const mainContent = document.getElementById('main-content');
+    const menuToggle = document.getElementById('menuToggle');
+    const sideMenu = document.getElementById('sideMenu');
+    const mainContainer = document.getElementById('mainContainer');
+    let loggedInUser = null;
+    let currentEditAnticipoId = null;
+    let pendingLoginUser = null; 
+    let userToChangePasswordId = null; 
+    let notesInterval = null; 
+    let sheetsInterval = null;
+    let allFetchedNotes = [];
+    let tipChart = null;
+    let divisoresDiariosExternos = {};
+
+    // --- Funciones de gestión de datos (localStorage) ---
+    function getAppData() { return JSON.parse(localStorage.getItem('appData')) || { usuarios: {}, userData: {} }; }
+    function saveAppData(data) { localStorage.setItem('appData', JSON.stringify(data)); }
+    function getUserData() {
+        const appData = getAppData();
+        const userId = loggedInUser.id;
+        if (!appData.userData[userId]) {
+            appData.userData[userId] = { montosPorFecha: {}, anticipos: [], divisor: 0, diasTrabajados: [], divisorPartTime: 1, divisorDelDia: null };
+            saveAppData(appData);
+        }
+        return appData.userData[userId];
+    }
+    function saveUserData(userData) {
+        const appData = getAppData();
+        const userId = loggedInUser.id;
+        appData.userData[userId] = userData;
+        saveAppData(appData);
+    }
+    
+    async function enviarDatosLoginASheets(user) {
+      if (!user || !SCRIPT_URL_LOGIN.startsWith('https://')) {
+        console.log('No se enviarán datos a Sheets (URL no configurada o usuario no válido).');
+        return { status: 'success', message: 'Función de Sheets desactivada localmente.' };
+      }
+      try {
+        const response = await fetch(SCRIPT_URL_LOGIN, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(user),
+        });
+        const result = await response.json();
+        console.log('Respuesta de Google Sheets:', result);
+        return result;
+      } catch (error) {
+        console.error('Error al enviar datos de login a Google Sheets:', error);
+        return { status: 'error', message: 'Error de conexión con el servidor. Intenta de nuevo.' };
+      }
+    }
+
+    // --- Funciones de utilidad ---
+    function showToast(message, type = 'success') {
+        const toastContainer = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`; toast.textContent = message;
+        toastContainer.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 400); }, 3000);
+    }
+
+    function showLoadingOverlay(message = 'Verificando...') {
+        let overlay = document.getElementById('loading-overlay');
+        if (!overlay) {
+            overlay = document.createElement('div');
+            overlay.id = 'loading-overlay';
+            Object.assign(overlay.style, {
+                position: 'fixed', top: '0', left: '0', width: '100%', height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)', color: 'white',
+                display: 'flex', justifyContent: 'center', alignItems: 'center',
+                zIndex: '10000', fontSize: '1.5em', transition: 'opacity 0.3s'
+            });
+            overlay.innerHTML = `
+                <div style="text-align: center;">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 2em; margin-bottom: 15px;"></i>
+                    <div id="loading-message"></div>
+                </div>`;
+            document.body.appendChild(overlay);
+        }
+        overlay.querySelector('#loading-message').textContent = message;
+        overlay.style.opacity = '1';
+        overlay.style.display = 'flex';
+    }
+
+    function hideLoadingOverlay() {
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => { overlay.style.display = 'none'; }, 300);
+        }
+    }
+
+    function formatNumberWithPoints(value) { if (value === null || value === undefined || isNaN(value)) { return "0"; } return Math.round(value).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "."); }
+    function formatDate(dateString) { if (!dateString) return ''; const [year, month, day] = dateString.split('-'); return `${day}/${month}/${year}`; }
+    function getTodayDateString() { return new Date().toISOString().split('T')[0]; }
+    function setupNumericInputFormatting(el) { if(el) el.addEventListener('input', e => { let v = e.target.value.replace(/\./g, ''); e.target.dataset.cleanValue = (isNaN(v) || v === '') ? '' : v; e.target.value = (isNaN(v) || v === '') ? '' : formatNumberWithPoints(parseInt(v, 10)); }); }
+    function formatNoteDate(isoString) { if (!isoString) return 'Fecha desconocida'; const date = new Date(isoString); return date.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+
+    // --- Lógica del menú y la interfaz principal ---
+    const setupMenu = () => {
+        sideMenu.innerHTML = '<div class="menu-header">Menú</div>';
+        const orderedSections = [
+            {id: 'retirosPropinaSection', title: 'Retiro de Propina'},
+            {id: 'montosSection', title: 'Montos por Noche'},
+            {id: 'datosUsuarioSection', title: 'Mis Datos'},
+            {id: 'notasSection', title: 'Notas Admin'}
+        ];
+
+        orderedSections.forEach(sectionInfo => {
+            const section = document.getElementById(sectionInfo.id);
+            if(section) {
+                const link = document.createElement('a');
+                link.href = '#'; link.textContent = sectionInfo.title; link.className = 'menu-link'; link.dataset.target = section.id;
+                sideMenu.appendChild(link);
+            }
+        });
+        
+        sideMenu.addEventListener('click', (e) => {
+            if (e.target.classList.contains('menu-link')) {
+                e.preventDefault();
+                const targetId = e.target.dataset.target;
+                localStorage.setItem('activePanel', targetId);
+                activatePanel(targetId);
+            }
+        });
+    };
+
+    function activatePanel(panelId) {
+        document.querySelectorAll('#main-content > section.content-panel').forEach(panel => panel.classList.remove('active'));
+        const targetPanel = document.getElementById(panelId);
+        if (targetPanel) {
+            targetPanel.classList.add('active');
+            if (panelId === 'montosSection') cargarYMostrarMontos();
+            if (panelId === 'notasSection') cargarNotas();
+            if (panelId === 'datosUsuarioSection') populateUserDataSection();
+        }
+
+        document.querySelectorAll('.menu-link').forEach(l => l.classList.remove('active-link'));
+        const activeLink = document.querySelector(`.menu-link[data-target="${panelId}"]`);
+        if(activeLink) activeLink.classList.add('active-link');
+
+        if (window.innerWidth < 992) { 
+            sideMenu.classList.remove('open'); 
+            menuToggle.classList.remove('active'); 
+        }
+    }
+
+    menuToggle.addEventListener('click', (event) => {
+        event.stopPropagation(); 
+        sideMenu.classList.toggle('open');
+        menuToggle.classList.toggle('active');
+    });
+    
+    mainContainer.addEventListener('click', () => {
+        if (sideMenu.classList.contains('open') && window.innerWidth < 992) {
+            sideMenu.classList.remove('open');
+            menuToggle.classList.remove('active');
+        }
+    });
+
+    const helpBtn = document.getElementById('help-btn');
+    const helpPanel = document.getElementById('help-panel');
+    const closeHelpBtn = document.getElementById('close-help-btn');
+    if (helpBtn && helpPanel && closeHelpBtn) {
+        helpBtn.addEventListener('click', () => helpPanel.classList.add('open'));
+        closeHelpBtn.addEventListener('click', () => helpPanel.classList.remove('open'));
+    }
+
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            document.body.classList.add('dark-mode');
+            themeIcon.classList.remove('fa-moon');
+            themeIcon.classList.add('fa-sun');
+        } else {
+            document.body.classList.remove('dark-mode');
+            themeIcon.classList.remove('fa-sun');
+            themeIcon.classList.add('fa-moon');
+        }
+    }
+    themeToggle.addEventListener('click', () => {
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        const newTheme = isDarkMode ? 'light' : 'dark';
+        localStorage.setItem('theme', newTheme);
+        applyTheme(newTheme);
+    });
+
+    document.querySelectorAll('.password-toggle-icon').forEach(icon => {
+        icon.addEventListener('click', () => {
+            const passwordInput = icon.previousElementSibling;
+            passwordInput.type = (passwordInput.type === 'password') ? 'text' : 'password';
+            icon.classList.toggle('fa-eye'); icon.classList.toggle('fa-eye-slash');
+        });
+    });
+
+    // --- Lógica de autenticación y sesión de usuario ---
+    function displayRecentLogins() {
+        const recentLogins = JSON.parse(localStorage.getItem('recentLogins')) || [];
+        const container = document.getElementById('quickAccessUsers');
+        container.innerHTML = ''; 
+        if (recentLogins.length > 0) {
+            container.parentElement.style.display = 'block';
+            recentLogins.forEach(user => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'quick-access-user';
+                userDiv.dataset.userId = user.id;
+                userDiv.innerHTML = `<button class="delete-user-btn" data-user-id="${user.id}">&times;</button><div class="quick-access-avatar">${user.nombre.charAt(0).toUpperCase()}</div><div class="quick-access-name">${user.nombre}</div>`;
+                container.appendChild(userDiv);
+            });
+        } else {
+            container.parentElement.style.display = 'none';
+        }
+    }
+
+    function deleteUser(userIdToDelete) {
+        const appData = getAppData();
+        const userToDelete = appData.usuarios[userIdToDelete];
+        if (!userToDelete) return;
+
+        const confirmation = confirm(`¿Estás seguro de que quieres eliminar a ${userToDelete.nombre} ${userToDelete.apellido}? Se borrarán todos sus datos de forma permanente.`);
+        if (confirmation) {
+            delete appData.usuarios[userIdToDelete];
+            delete appData.userData[userIdToDelete];
+            saveAppData(appData);
+            let recentLogins = JSON.parse(localStorage.getItem('recentLogins')) || [];
+            recentLogins = recentLogins.filter(u => u.id !== userIdToDelete);
+            localStorage.setItem('recentLogins', JSON.stringify(recentLogins));
+            showToast('Usuario eliminado con éxito.');
+            displayRecentLogins(); 
+        }
+    }
+
+    document.getElementById('quickAccessUsers').addEventListener('click', (e) => {
+        const deleteButton = e.target.closest('.delete-user-btn');
+        if (deleteButton) {
+            e.stopPropagation(); 
+            deleteUser(deleteButton.dataset.userId);
+            return;
+        }
+
+        const userTile = e.target.closest('.quick-access-user');
+        if (userTile) {
+            const userId = userTile.dataset.userId;
+            const fullUser = getAppData().usuarios[userId];
+            if (fullUser) {
+                document.getElementById('loginNombre').value = fullUser.nombre || '';
+                document.getElementById('loginApellido').value = fullUser.apellido || '';
+                document.getElementById('loginTipoContrato').value = fullUser.tipo || '';
+                document.getElementById('loginSeccion').value = fullUser.seccion || '';
+                document.getElementById('loginDia').value = fullUser.dia || '';
+                document.getElementById('loginMes').value = fullUser.mes || '';
+                document.getElementById('loginAnio').value = fullUser.anio || '';
+                document.getElementById('loginPuntos').value = fullUser.puntos || '';
+                
+                document.getElementById('loginPassword').value = ''; 
+                document.getElementById('loginPassword').focus();   
+            }
+        }
+    });
+
+    function addRecentLogin(user) {
+        let recentLogins = JSON.parse(localStorage.getItem('recentLogins')) || [];
+        recentLogins = recentLogins.filter(u => u.id !== user.id); 
+        recentLogins.unshift({ 
+            id: user.id, 
+            nombre: user.nombre, 
+            apellido: user.apellido,
+            timestamp: new Date().toISOString(), // <-- AÑADIDO: Guardar la hora
+            isNew: user.isNew || false // <-- AÑADIDO: Guardar si es nuevo registro
+        });
+        recentLogins = recentLogins.slice(0, 10); // Guardar los últimos 10
+        localStorage.setItem('recentLogins', JSON.stringify(recentLogins));
+    }
+
+    function completeLogin(user) {
+        localStorage.setItem('loggedInUser', JSON.stringify(user));
+        addRecentLogin(user);
+        location.reload();
+    }
+
+    function checkLogin() {
+        const user = JSON.parse(localStorage.getItem('loggedInUser'));
+        const helpTitle = document.getElementById('help-title');
+        const helpContentLogin = document.getElementById('help-content-login');
+        const helpContentMain = document.getElementById('help-content-main');
+        
+        if (helpBtn) helpBtn.style.display = 'flex'; 
+
+        if (user && user.id) {
+            loggedInUser = user;
+            loginContainer.style.display = 'none'; 
+            mainContent.style.display = 'block'; 
+            menuToggle.style.display = 'flex';
+            document.getElementById('userInfo').textContent = `${user.nombre} ${user.apellido}`;
+            
+            if(helpTitle) helpTitle.textContent = 'Guía de Uso';
+            if(helpContentLogin) helpContentLogin.classList.remove('active-help');
+            if(helpContentMain) helpContentMain.classList.add('active-help');
+
+            setupMenu(); 
+            initApp();
+        } else {
+            loginContainer.style.display = 'block'; 
+            mainContent.style.display = 'none'; 
+            menuToggle.style.display = 'none';
+
+            if(helpTitle) helpTitle.textContent = 'Ayuda de Acceso';
+            if(helpContentMain) helpContentMain.classList.remove('active-help');
+            if(helpContentLogin) helpContentLogin.classList.add('active-help');
+            
+            displayRecentLogins();
+        }
+    }
+    
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const loginButton = e.target.querySelector('button[type="submit"]');
+
+        const nombre = document.getElementById('loginNombre').value.trim();
+        const apellido = document.getElementById('loginApellido').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const dia = document.getElementById('loginDia').value;
+        const mes = document.getElementById('loginMes').value;
+        const anio = document.getElementById('loginAnio').value;
+
+        if (!nombre || !apellido || !password || !dia || !mes || !anio) {
+            showToast("Todos los campos son requeridos.", "error");
+            return;
+        }
+
+        showLoadingOverlay('Verificando credenciales...');
+        if (loginButton) loginButton.disabled = true;
+
+        try {
+            const userId = `${nombre.toLowerCase()}-${apellido.toLowerCase()}`;
+            const appData = getAppData();
+            let existingUser = appData.usuarios[userId];
+            let userToValidate;
+
+            if (existingUser) {
+                if (existingUser.password === password) {
+                    existingUser.tipo = document.getElementById('loginTipoContrato').value;
+                    existingUser.seccion = document.getElementById('loginSeccion').value;
+                    existingUser.puntos = parseFloat(document.getElementById('loginPuntos').value) || 0;
+                    existingUser.dia = dia;
+                    existingUser.mes = mes;
+                    existingUser.anio = anio;
+                    userToValidate = existingUser;
+                    userToValidate.isNew = false; // <-- AÑADIDO: No es un nuevo registro
+                } else {
+                    showToast('Contraseña incorrecta.', 'error');
+                    return;
+                }
+            } else {
+                userToValidate = {
+                    id: userId, nombre: nombre, apellido: apellido,
+                    tipo: document.getElementById('loginTipoContrato').value,
+                    seccion: document.getElementById('loginSeccion').value,
+                    dia: dia, mes: mes, anio: anio,
+                    puntos: parseFloat(document.getElementById('loginPuntos').value) || 0,
+                    password: password, telefono: '',
+                    isNew: true // <-- AÑADIDO: Es un nuevo registro
+                };
+                if (!userToValidate.tipo || !userToValidate.seccion || !userToValidate.anio || userToValidate.puntos <= 0) {
+                    showToast("Completa todos los campos para registrarte.", "error");
+                    return;
+                }
+            }
+            
+            const sheetsResponse = await enviarDatosLoginASheets(userToValidate);
+
+            if (sheetsResponse.status === 'error') {
+                showToast(sheetsResponse.message, 'error');
+                return; 
+            }
+
+            if (existingUser) {
+                appData.usuarios[userId] = userToValidate;
+                saveAppData(appData);
+            }
+
+            pendingLoginUser = userToValidate;
+
+            if (!pendingLoginUser.telefono) {
+                document.getElementById('phoneModal').style.display = 'flex';
+            } else {
+                completeLogin(pendingLoginUser);
+            }
+
+        } catch (error) {
+            console.error("Error en el proceso de login:", error);
+            showToast("Ocurrió un error inesperado durante el login.", "error");
+        } finally {
+            hideLoadingOverlay();
+            if (loginButton) loginButton.disabled = false;
+        }
+    });
+    
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    
+    document.getElementById('savePhoneBtn').addEventListener('click', () => {
+        const phoneInput = document.getElementById('phoneInput');
+        const phone = phoneInput.value.trim();
+        if (phone && !isNaN(phone) && phone.length > 5) {
+            if (pendingLoginUser) {
+                pendingLoginUser.telefono = phone;
+                let appData = getAppData();
+                appData.usuarios[pendingLoginUser.id] = pendingLoginUser;
+                saveAppData(appData);
+                document.getElementById('phoneModal').style.display = 'none';
+                phoneInput.value = '';
+                enviarDatosLoginASheets(pendingLoginUser); 
+                completeLogin(pendingLoginUser);
+            }
+        } else {
+            showToast("Por favor, ingresa un número de teléfono válido.", "error");
+        }
+    });
+
+    document.getElementById('forgotPasswordLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        const modal = document.getElementById('forgotPasswordModal');
+        modal.querySelector('#verifyPhoneContainer').style.display = 'block';
+        modal.querySelector('#newPasswordContainer').style.display = 'none';
+        modal.querySelector('#verifyPhoneBtn').style.display = 'inline-block';
+        modal.querySelector('#saveNewPasswordBtn').style.display = 'none';
+        modal.querySelector('#recoverPhoneInput').value = '';
+        modal.querySelector('#newPasswordInput').value = '';
+        modal.querySelector('#recoveryResult').style.display = 'none';
+        modal.style.display = 'flex';
+    });
+
+    document.getElementById('cancelForgotBtn').addEventListener('click', () => {
+        document.getElementById('forgotPasswordModal').style.display = 'none';
+        userToChangePasswordId = null;
+    });
+
+    document.getElementById('verifyPhoneBtn').addEventListener('click', () => {
+        const phone = document.getElementById('recoverPhoneInput').value.trim();
+        const resultDiv = document.getElementById('recoveryResult');
+        if (!phone) { showToast("Ingresa un número de teléfono.", "error"); return; }
+        const foundUser = Object.values(getAppData().usuarios).find(user => user.telefono === phone);
+        if (foundUser) {
+            userToChangePasswordId = foundUser.id;
+            const modal = document.getElementById('forgotPasswordModal');
+            modal.querySelector('#verifyPhoneContainer').style.display = 'none';
+            modal.querySelector('#newPasswordContainer').style.display = 'block';
+            modal.querySelector('#verifyPhoneBtn').style.display = 'none';
+            modal.querySelector('#saveNewPasswordBtn').style.display = 'inline-block';
+        } else {
+            resultDiv.textContent = 'No se encontró ninguna cuenta con ese número.'; resultDiv.className = 'error'; resultDiv.style.display = 'block';
+        }
+    });
+    
+    document.getElementById('saveNewPasswordBtn').addEventListener('click', () => {
+        const newPassword = document.getElementById('newPasswordInput').value;
+        if(newPassword.length < 4){ showToast("La contraseña debe tener al menos 4 caracteres.", "error"); return; }
+        if(userToChangePasswordId){
+            const appData = getAppData();
+            appData.usuarios[userToChangePasswordId].password = newPassword;
+            saveAppData(appData);
+            showToast("Contraseña cambiada con éxito.");
+            document.getElementById('forgotPasswordModal').style.display = 'none';
+            userToChangePasswordId = null;
+        }
+    });
+
+    function populateUserDataSection() {
+        if (!loggedInUser) return;
+        document.getElementById('userDataNombre').textContent = `${loggedInUser.nombre} ${loggedInUser.apellido}`;
+        document.getElementById('userDataContrato').textContent = loggedInUser.tipo;
+        document.getElementById('puntosValueDisplay').textContent = loggedInUser.puntos;
+        const fechaIngresoEl = document.getElementById('userDataFechaIngreso');
+        if (loggedInUser.dia && loggedInUser.mes) {
+            fechaIngresoEl.textContent = `${String(loggedInUser.dia).padStart(2, '0')}/${String(loggedInUser.mes).padStart(2, '0')}/${loggedInUser.anio}`;
+        } else {
+            fechaIngresoEl.textContent = loggedInUser.anio;
+        }
+    }
+    
+    document.getElementById('changePasswordBtn').addEventListener('click', () => {
+        document.getElementById('newPasswordLoggedInInput').value = '';
+        document.getElementById('changePasswordModal').style.display = 'flex';
+    });
+    document.getElementById('cancelChangePasswordBtn').addEventListener('click', () => {
+        document.getElementById('changePasswordModal').style.display = 'none';
+    });
+    
+    document.getElementById('saveNewPasswordLoggedInBtn').addEventListener('click', () => {
+        const newPassword = document.getElementById('newPasswordLoggedInInput').value;
+        if (newPassword.length < 4) { showToast("La contraseña debe tener al menos 4 caracteres.", "error"); return; }
+        const appData = getAppData();
+        appData.usuarios[loggedInUser.id].password = newPassword;
+        saveAppData(appData);
+        loggedInUser.password = newPassword;
+        localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+        showToast("Contraseña actualizada con éxito.");
+        document.getElementById('changePasswordModal').style.display = 'none';
+    });
+
+    document.getElementById('editPuntosBtn').addEventListener('click', () => {
+        const editPuntosModal = document.getElementById('editPuntosModal');
+        document.getElementById('editPuntosInput').value = loggedInUser.puntos;
+        editPuntosModal.style.display = 'flex';
+    });
+
+    document.getElementById('cancelEditPuntosBtn').addEventListener('click', () => {
+        document.getElementById('editPuntosModal').style.display = 'none';
+    });
+    
+    document.getElementById('saveEditPuntosBtn').addEventListener('click', () => {
+        const newPuntosInput = document.getElementById('editPuntosInput');
+        const newPuntos = parseFloat(newPuntosInput.value);
+
+        if (isNaN(newPuntos) || newPuntos <= 0) {
+            showToast('Por favor, ingresa un número de puntos válido y mayor a cero.', 'error');
+            return;
+        }
+
+        loggedInUser.puntos = newPuntos;
+        const appData = getAppData();
+        appData.usuarios[loggedInUser.id].puntos = newPuntos;
+        saveAppData(appData);
+        localStorage.setItem('loggedInUser', JSON.stringify(loggedInUser));
+
+        populateUserDataSection();
+        actualizarCalculoRetiro();
+        
+        document.getElementById('editPuntosModal').style.display = 'none';
+        showToast('Cantidad de puntos actualizada correctamente.');
+    });
+    
+    document.getElementById('exportDataBtn')?.addEventListener('click', () => {
+        try {
+            const appData = localStorage.getItem('appData');
+            if (!appData || appData === '{}') {
+                showToast('No hay datos para respaldar.', 'error');
+                return;
+            }
+            const dataBlob = new Blob([appData], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const anchor = document.createElement('a');
+            const date = new Date();
+            const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            anchor.href = url;
+            anchor.download = `respaldo_registros_${dateString}.json`;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            URL.revokeObjectURL(url);
+            showToast('Respaldo generado con éxito.');
+        } catch (error) {
+            console.error('Error al exportar datos:', error);
+            showToast('Ocurrió un error al generar el respaldo.', 'error');
+        }
+    });
+
+    document.getElementById('importDataBtn')?.addEventListener('click', () => {
+        document.getElementById('importFileInput').click();
+    });
+
+    document.getElementById('importFileInput')?.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        const inputElement = event.target; 
+        if (!file) { return; }
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const jsonContent = e.target.result;
+                const parsedData = JSON.parse(jsonContent);
+                if (typeof parsedData.usuarios !== 'object' || typeof parsedData.userData !== 'object') {
+                    throw new Error('El archivo no tiene el formato esperado.');
+                }
+                const confirmation = confirm('¡ADVERTENCIA!\n\nEstás a punto de reemplazar TODOS los datos actuales con los del archivo. Esta acción no se puede deshacer.\n\n¿Deseas continuar?');
+                if (confirmation) {
+                    if (localStorage.getItem('loggedInUser')) {
+                        localStorage.removeItem('loggedInUser');
+                    }
+                    localStorage.setItem('appData', jsonContent);
+                    showToast('Datos restaurados. La página se recargará.');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showToast('Restauración cancelada.');
+                }
+            } catch (error) {
+                console.error('Error al importar datos:', error);
+                showToast(`Error al procesar el archivo: ${error.message}`, 'error');
+            } finally {
+                inputElement.value = '';
+            }
+        };
+        reader.onerror = () => {
+            showToast('No se pudo leer el archivo seleccionado.', 'error');
+            inputElement.value = '';
+        };
+        reader.readAsText(file);
+    });
+
+    // --- Lógica de la aplicación (Montos, Cálculos, etc.) ---
+    async function importarDesdeSheets(isSilent = false) {
+        if (!loggedInUser) return;
+        const btn = document.getElementById('importarDesdeSheetsBtn');
+        if (!isSilent) {
+            btn.textContent = 'Sincronizando...';
+            btn.disabled = true;
+        }
+        try {
+            const response = await fetch(`${SCRIPT_URL_RECAUDACION}?action=get`);
+            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+            const result = await response.json();
+            if (result.status !== 'success' || !result.data) throw new Error(result.message || 'La respuesta no fue exitosa.');
+            const nuevosMontosDesdeSheet = {};
+            result.data.forEach(dato => {
+                const { fecha, tipo, monto } = dato;
+                if (!nuevosMontosDesdeSheet[fecha]) nuevosMontosDesdeSheet[fecha] = [];
+                nuevosMontosDesdeSheet[fecha].push({ area: tipo, monto: parseFloat(monto) });
+            });
+            const userData = getUserData();
+            userData.montosPorFecha = nuevosMontosDesdeSheet;
+            saveUserData(userData);
+            // La llamada a cargarYMostrarMontos se hará después de la sincronización en initApp
+            if (!isSilent) {
+                cargarYMostrarMontos(); // Actualizar solo si es un click manual
+                showToast("Datos sincronizados con Google Sheets.");
+            }
+        } catch (error) {
+            if (!isSilent) {
+                showToast('Error al sincronizar: ' + error.message, 'error');
+            }
+            console.error("Error detallado:", error);
+        } finally {
+            if (!isSilent) {
+                btn.textContent = 'Sincronizar con Sheets';
+                btn.disabled = false;
+            }
+        }
+    }
+
+    function cargarYMostrarMontos() {
+        const userData = getUserData();
+        const montosPorFecha = userData.montosPorFecha;
+        const diasTrabajados = userData.diasTrabajados || [];
+        const isPartTime = loggedInUser && loggedInUser.tipo === 'Part Time';
+        
+        const contenedor = document.getElementById('tarjetasMontos');
+        contenedor.innerHTML = '';
+        
+        let fechasAMostrar = Object.keys(montosPorFecha);
+        if (isPartTime) fechasAMostrar = fechasAMostrar.filter(fecha => diasTrabajados.includes(fecha));
+        const fechasOrdenadas = fechasAMostrar.sort((a, b) => b.localeCompare(a));
+        
+        let totalGeneral = 0;
+        fechasOrdenadas.forEach(fecha => {
+            const montos = montosPorFecha[fecha];
+            let totalFecha = montos.reduce((sum, m) => sum + parseFloat(m.monto), 0);
+            totalGeneral += totalFecha;
+            const tarjetaDiv = document.createElement('div');
+            tarjetaDiv.className = 'tarjeta collapsed';
+            tarjetaDiv.innerHTML = `<h3><span>Fecha: ${formatDate(fecha)}</span><span class="total-in-header">$${formatNumberWithPoints(totalFecha)}</span></h3><div class="montos-list">${montos.map((m, index) => `<div class="monto-item"><span><strong>${m.area}:</strong> $${formatNumberWithPoints(m.monto)}</span><button class="delete-button" data-fecha="${fecha}" data-index="${index}">🗑️</button></div>`).join('')}</div>`;
+            contenedor.appendChild(tarjetaDiv);
+            tarjetaDiv.querySelector('h3').addEventListener('click', () => tarjetaDiv.classList.toggle('collapsed'));
+        });
+        document.getElementById('totalDiario').textContent = `Total recaudado: $${formatNumberWithPoints(totalGeneral)}`;
+        actualizarCalculoRetiro();
+
+        contenedor.addEventListener('click', e => {
+            if (e.target.classList.contains('delete-button')) {
+                if(confirm('¿Seguro que quieres eliminar este monto? Esta acción no se puede deshacer.')) {
+                    const { fecha, index } = e.target.dataset;
+                    const userData = getUserData();
+                    userData.montosPorFecha[fecha].splice(index, 1);
+                    if (userData.montosPorFecha[fecha].length === 0) delete userData.montosPorFecha[fecha];
+                    saveUserData(userData);
+                    cargarYMostrarMontos(); 
+                    showToast("Monto eliminado.");
+                }
+            }
+        });
+    }
+    
+    async function obtenerYActualizarValorPorPuntoExterno() {
+        if (!loggedInUser || loggedInUser.tipo !== 'Planta') {
+            return;
+        }
+        
+        console.log("Sincronizando con app de recaudación externa...");
+        
+        try {
+            const response = await fetch(`${SCRIPT_URL_RECAUDACION_EXTERNA}?action=get&v=${new Date().getTime()}`);
+            if (!response.ok) {
+                console.error("No se pudo conectar con la app externa de recaudación.");
+                return;
+            }
+            
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.data) {
+                const datosExternos = result.data;
+                const divisoresResponse = await fetch(`${SCRIPT_URL_RECAUDACION_EXTERNA}?action=getDivisores&v=${new Date().getTime()}`);
+                const divisoresExternos = (await divisoresResponse.json()).data || {};
+                
+                const totalesPorDia = datosExternos.reduce((acc, dato) => {
+                    acc[dato.fecha] = (acc[dato.fecha] || 0) + dato.monto;
+                    return acc;
+                }, {});
+
+                const totalGeneralDivision = Object.keys(totalesPorDia).reduce((sum, fecha) => {
+                    const divisor = divisoresExternos[fecha];
+                    return divisor > 0 ? sum + (totalesPorDia[fecha] / divisor) : sum;
+                }, 0);
+
+                let ultimoDivisorRegistrado = null;
+                const fechasDivisores = Object.keys(divisoresExternos).sort();
+                if (fechasDivisores.length > 0) {
+                    const ultimaFecha = fechasDivisores[fechasDivisores.length - 1];
+                    ultimoDivisorRegistrado = divisoresExternos[ultimaFecha];
+                }
+                
+                const userData = getUserData();
+                const needsUpdate = userData.divisor !== totalGeneralDivision || userData.divisorDelDia !== ultimoDivisorRegistrado;
+
+                if (needsUpdate) {
+                    userData.divisor = totalGeneralDivision;
+                    userData.divisorDelDia = ultimoDivisorRegistrado;
+                    saveUserData(userData);
+                    
+                    console.log(`'Valor por Punto' actualizado: ${totalGeneralDivision}. Último divisor capturado: ${ultimoDivisorRegistrado}.`);
+                    // El toast de actualización general se mostrará en initApp
+                    actualizarCalculoPlanta();
+                }
+            }
+        } catch (error) {
+            console.error("Error al obtener datos de la app externa:", error);
+        }
+    }
+
+    async function obtenerDivisoresExternos(isSilent = true) {
+        try {
+            const divisoresResponse = await fetch(`${SCRIPT_URL_RECAUDACION_EXTERNA}?action=getDivisores&v=${new Date().getTime()}`);
+            if (!divisoresResponse.ok) {
+                 if (!isSilent) showToast('No se pudieron obtener los divisores diarios.', 'error');
+                 console.error("No se pudo conectar para obtener divisores.");
+                 return;
+            }
+            const result = await divisoresResponse.json();
+            if (result.status === 'success' && result.data) {
+                divisoresDiariosExternos = result.data;
+                // <-- CAMBIO 1: Guardar los divisores obtenidos en la caché local para el próximo inicio.
+                localStorage.setItem('cachedDivisores', JSON.stringify(divisoresDiariosExternos));
+                console.log("Divisores externos actualizados y guardados en caché local.");
+                if (loggedInUser && loggedInUser.tipo === 'Part Time') {
+                    actualizarCalculoPartTime();
+                }
+            }
+        } catch (error) {
+            console.error("Error al obtener los divisores externos:", error);
+            if (!isSilent) showToast('Error al obtener divisores.', 'error');
+        }
+    }
+    
+    function actualizarCalculoRetiro() { if (!loggedInUser) return; loggedInUser.tipo === 'Planta' ? actualizarCalculoPlanta() : actualizarCalculoPartTime(); }
+    
+    function actualizarCalculoPlanta() {
+        const userData = getUserData();
+        const p = loggedInUser.puntos || 0;
+        const total = Object.values(userData.montosPorFecha || {}).flat().reduce((s, m) => s + m.monto, 0);
+        const valorPorPunto = userData.divisor || 0; 
+        const anticiposTotal = (userData.anticipos || []).reduce((s, a) => s + a.monto, 0);
+        const sub = valorPorPunto * p; 
+        const res = sub - anticiposTotal;
+        const resultadoFinalEl = document.getElementById('resultadoFinalPlanta');
+        
+        document.getElementById('puntosUsuarioDisplayPlanta').textContent = p;
+        document.getElementById('totalMontoDividirPlanta').textContent = `$${formatNumberWithPoints(total)}`;
+        
+        const divisorDelDia = userData.divisorDelDia;
+        document.getElementById('divisorDisplayPlanta').textContent = divisorDelDia ? formatNumberWithPoints(divisorDelDia) : 'No registrado';
+
+        document.getElementById('valorPorPuntoDisplayPlanta').textContent = `$${formatNumberWithPoints(valorPorPunto)}`;
+        document.getElementById('subtotalDisplayPlanta').textContent = `$${formatNumberWithPoints(sub)}`;
+        document.getElementById('anticiposDisplayPlanta').textContent = `-$${formatNumberWithPoints(anticiposTotal)}`;
+        
+        resultadoFinalEl.textContent = `$${formatNumberWithPoints(res)}`;
+        resultadoFinalEl.style.color = (res < 0) ? 'var(--danger-color)' : 'var(--primary-color)';
+        
+        renderAnticiposList('#anticipos-list-container-planta');
+    }
+
+    function actualizarCalculoPartTime() {
+        const userData = getUserData();
+        const p = loggedInUser.puntos || 0;
+        const dias = userData.diasTrabajados || [];
+        const montos = userData.montosPorFecha || {};
+        const pozo = dias.reduce((s, f) => s + (montos[f] || []).reduce((ds, m) => ds + m.monto, 0), 0);
+        
+        let div = 0;
+        if (dias.length > 0) {
+            const ultimoDiaTrabajado = dias.sort((a, b) => b.localeCompare(a))[0];
+            div = divisoresDiariosExternos[ultimoDiaTrabajado] || 0;
+        }
+
+        const anticiposTotal = (userData.anticipos || []).reduce((s, a) => s + a.monto, 0);
+        const vpp = div > 0 ? (pozo / div) : 0;
+        const sub = vpp * p;
+        const res = sub - anticiposTotal;
+        const resultadoFinalEl = document.getElementById('resultadoFinalPT');
+
+        document.getElementById('puntosUsuarioDisplayPT').textContent = p;
+        document.getElementById('diasTrabajadosDisplayPT').textContent = dias.length;
+        document.getElementById('pozoIndividualDisplayPT').textContent = `$${formatNumberWithPoints(pozo)}`;
+        document.getElementById('divisorDisplayPT').textContent = formatNumberWithPoints(div);
+        document.getElementById('valorPorPuntoDisplayPT').textContent = `$${formatNumberWithPoints(vpp)}`;
+        document.getElementById('subtotalDisplayPT').textContent = `$${formatNumberWithPoints(sub)}`;
+        document.getElementById('anticiposDisplayPT').textContent = `-$${formatNumberWithPoints(anticiposTotal)}`;
+        
+        resultadoFinalEl.textContent = `$${formatNumberWithPoints(res)}`;
+        resultadoFinalEl.style.color = (res < 0) ? 'var(--danger-color)' : 'var(--primary-color)';
+        
+        renderAnticiposList('#anticipos-list-container-pt');
+    }
+
+    function renderAnticiposList(containerSelector) {
+        const container = document.querySelector(containerSelector);
+        if (!container) return;
+        const anticipos = getUserData().anticipos || [];
+        container.innerHTML = '';
+        if (anticipos.length === 0) {
+            container.innerHTML = '<p style="text-align:center; color:#888; margin:0;">No hay anticipos.</p>';
+        } else {
+            anticipos.sort((a,b) => b.fecha.localeCompare(a.fecha)).forEach(anticipo => { container.innerHTML += `<div class="anticipo-item"><span>${formatDate(anticipo.fecha)}</span><strong>$${formatNumberWithPoints(anticipo.monto)}</strong><div class="actions"><button class="anticipo-item-btn edit-anticipo-btn" data-id="${anticipo.id}">✏️</button><button class="anticipo-item-btn delete-anticipo-btn" data-id="${anticipo.id}">🗑️</button></div></div>`; });
+        }
+    }
+
+    function renderCalendar(container) {
+        let date = new Date();
+        const render = () => {
+            const month = date.getMonth(), year = date.getFullYear();
+            container.innerHTML = `<div class="calendar-header"><button id="prev-month">‹</button><span>${date.toLocaleString("es-ES", { month: "long", year: "numeric" })}</span><button id="next-month">›</button></div><div class="calendar-grid"><div class="day-name">Dom</div><div class="day-name">Lun</div><div class="day-name">Mar</div><div class="day-name">Mié</div><div class="day-name">Jue</div><div class="day-name">Vie</div><div class="day-name">Sáb</div></div>`;
+            const firstDay = new Date(year, month, 1).getDay(), lastDate = new Date(year, month + 1, 0).getDate();
+            const grid = container.querySelector('.calendar-grid');
+            for (let i = 0; i < firstDay; i++) grid.insertAdjacentHTML("beforeend", `<div class="day empty"></div>`);
+            const userData = getUserData();
+            for (let i = 1; i <= lastDate; i++) {
+                const dateString = new Date(year, month, i).toISOString().split('T')[0];
+                const isMarked = (userData.diasTrabajados || []).includes(dateString);
+                grid.insertAdjacentHTML("beforeend", `<div class="day ${isMarked ? 'marked' : ''}" data-date="${dateString}">${i}</div>`);
+            }
+            document.getElementById("prev-month").addEventListener("click", () => { date.setMonth(date.getMonth() - 1); render(); });
+            document.getElementById("next-month").addEventListener("click", () => { date.setMonth(date.getMonth() + 1); render(); });
+        };
+        render();
+    }
+    
+    document.getElementById('main-content').addEventListener('click', e => {
+        const targetBtn = e.target.closest('button');
+        if (targetBtn) {
+            const id = targetBtn.id;
+            if (id === 'registrarAnticipoBtn') { document.getElementById('addAnticipoModal').style.display = 'flex'; document.getElementById('addAnticipoFechaInput').value = getTodayDateString(); }
+            if (id === 'resetMesBtn') { if (confirm('¿Estás SEGURO de reiniciar el mes? ¡Se borrarán todos los montos y anticipos de forma permanente!')) { let userData = getUserData(); userData.montosPorFecha = {}; userData.anticipos = []; userData.divisor = 0; userData.diasTrabajados = []; saveUserData(userData); showToast('Datos reiniciados.'); setTimeout(() => location.reload(), 1000); }}
+            if (id === 'registrarDivisorPTBtn') {
+                const input = document.getElementById('divisorPTInput');
+                const userData = getUserData();
+                input.value = formatNumberWithPoints(userData.divisorPartTime || 1);
+                input.dataset.cleanValue = userData.divisorPartTime || 1;
+                document.getElementById('divisorPTModal').style.display = 'flex';
+            }
+        }
+        const anticipoBtn = e.target.closest('.anticipo-item-btn');
+        if (anticipoBtn) {
+            const anticipoId = Number(anticipoBtn.dataset.id);
+            let userData = getUserData();
+            if (anticipoBtn.classList.contains('delete-anticipo-btn')) {
+                if (confirm('¿Estás seguro de que quieres eliminar este anticipo? Esta acción no se puede deshacer.')) {
+                    userData.anticipos = userData.anticipos.filter(a => a.id !== anticipoId);
+                    saveUserData(userData); 
+                    actualizarCalculoRetiro(); 
+                    showToast("Anticipo eliminado.");
+                }
+            }
+            if (anticipoBtn.classList.contains('edit-anticipo-btn')) {
+                const anticipoToEdit = userData.anticipos.find(a => a.id === anticipoId);
+                if(anticipoToEdit) {
+                    currentEditAnticipoId = anticipoToEdit.id;
+                    const montoInput = document.getElementById('editAnticipoMontoInput');
+                    montoInput.value = formatNumberWithPoints(anticipoToEdit.monto);
+                    montoInput.dataset.cleanValue = anticipoToEdit.monto;
+                    document.getElementById('editAnticipoFechaInput').value = anticipoToEdit.fecha;
+                    document.getElementById('editAnticipoModal').style.display = 'flex';
+                }
+            }
+        }
+        if(e.target.classList.contains('day') && !e.target.classList.contains('empty')) {
+            const dateString = e.target.dataset.date;
+            const userData = getUserData();
+            const dias = userData.diasTrabajados || [];
+            const dateIndex = dias.indexOf(dateString);
+            if (dateIndex > -1) { dias.splice(dateIndex, 1); } else { dias.push(dateString); }
+            userData.diasTrabajados = dias;
+            saveUserData(userData);
+            e.target.classList.toggle('marked');
+            actualizarCalculoPartTime();
+            cargarYMostrarMontos(); 
+        }
+    });
+
+    document.getElementById('cancelAddAnticipoBtn').addEventListener('click', () => { document.getElementById('addAnticipoModal').style.display = 'none'; });
+    document.getElementById('cancelEditAnticipoBtn').addEventListener('click', () => { document.getElementById('editAnticipoModal').style.display = 'none'; });
+    document.getElementById('cancelDivisorPTBtn').addEventListener('click', () => { document.getElementById('divisorPTModal').style.display = 'none'; });
+
+    document.getElementById('saveAddAnticipoBtn').addEventListener('click', () => {
+        const monto = parseFloat(document.getElementById('addAnticipoMontoInput').dataset.cleanValue) || 0;
+        const fecha = document.getElementById('addAnticipoFechaInput').value;
+        if (monto <= 0 || !fecha) { showToast('Datos inválidos.', 'error'); return; }
+        const userData = getUserData();
+        userData.anticipos.push({ id: Date.now(), monto, fecha });
+        saveUserData(userData);
+        document.getElementById('addAnticipoMontoInput').value = '';
+        document.getElementById('addAnticipoModal').style.display = 'none';
+        actualizarCalculoRetiro(); showToast("Anticipo registrado.");
+    });
+    document.getElementById('saveEditAnticipoBtn').addEventListener('click', () => {
+        const newMonto = parseFloat(document.getElementById('editAnticipoMontoInput').dataset.cleanValue) || 0;
+        const newFecha = document.getElementById('editAnticipoFechaInput').value;
+        if (newMonto <= 0 || !newFecha) { showToast('Datos inválidos.', 'error'); return; }
+        const userData = getUserData();
+        const idx = userData.anticipos.findIndex(a => a.id === currentEditAnticipoId);
+        if (idx > -1) {
+            userData.anticipos[idx].monto = newMonto; userData.anticipos[idx].fecha = newFecha;
+            saveUserData(userData);
+            document.getElementById('editAnticipoModal').style.display = 'none';
+            currentEditAnticipoId = null;
+            actualizarCalculoRetiro(); showToast("Anticipo actualizado.");
+        }
+    });
+
+    document.getElementById('saveDivisorPTBtn').addEventListener('click', () => {
+        const divisor = parseFloat(document.getElementById('divisorPTInput').dataset.cleanValue) || 1;
+        if (divisor <= 0) { showToast('Divisor inválido.', 'error'); return; }
+        const userData = getUserData(); userData.divisorPartTime = divisor; saveUserData(userData);
+        document.getElementById('divisorPTModal').style.display = 'none';
+        actualizarCalculoPartTime(); showToast("Divisor personal guardado.");
+    });
+
+    // --- Lógica de Estadísticas (Ahora en un Modal) ---
+    const statsModal = document.getElementById('statsModal');
+    const openStatsModalBtn = document.getElementById('openStatsModalBtn');
+    const closeStatsModalBtn = document.getElementById('closeStatsModalBtn');
+
+    openStatsModalBtn.addEventListener('click', () => {
+        updateStatisticsUI();
+        statsModal.style.display = 'flex';
+    });
+    closeStatsModalBtn.addEventListener('click', () => {
+        statsModal.style.display = 'none';
+    });
+    statsModal.addEventListener('click', (e) => {
+        if (e.target === statsModal) {
+            statsModal.style.display = 'none';
+        }
+    });
+
+    function updateStatisticsUI(view = 'daily') {
+        if (!loggedInUser) return;
+
+        const today = new Date();
+        const currentDay = today.getDate();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+
+        let startDate, endDate;
+
+        if (currentDay < 15) {
+            const lastMonth = new Date(currentYear, currentMonth - 1, 15);
+            startDate = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 15);
+            endDate = new Date(currentYear, currentMonth, 14);
+        } else {
+            const nextMonth = new Date(currentYear, currentMonth + 1, 14);
+            startDate = new Date(currentYear, currentMonth, 15);
+            endDate = new Date(nextMonth.getFullYear(), nextMonth.getMonth(), 14);
+        }
+
+        const modalHeader = statsModal.querySelector('.modal-header h4');
+        modalHeader.innerHTML = `Estadísticas del Período <small style="font-size: 0.6em; font-weight: normal; display: block;">(${startDate.toLocaleDateString('es-ES')} - ${endDate.toLocaleDateString('es-ES')})</small>`;
+
+        const startDateString = startDate.toISOString().split('T')[0];
+        const endDateString = endDate.toISOString().split('T')[0];
+        
+        const userData = getUserData();
+        const montosPorFecha = userData.montosPorFecha || {};
+        
+        const fechasDelPeriodo = Object.keys(montosPorFecha).filter(fecha => {
+            return fecha >= startDateString && fecha <= endDateString;
+        }).sort();
+
+        const statCardsContainer = document.getElementById('statCardsContainer');
+        const chartContainer = document.querySelector('.chart-container');
+        const chartControls = document.querySelector('.chart-controls');
+        
+        if (fechasDelPeriodo.length === 0) {
+            statCardsContainer.innerHTML = '<p style="text-align:center; color: var(--text-secondary);">No hay datos para mostrar estadísticas en el período actual.</p>';
+            if(tipChart) tipChart.destroy();
+            chartContainer.style.display = 'none';
+            chartControls.style.display = 'none';
+            return;
+        } else {
+            chartContainer.style.display = 'block';
+            chartControls.style.display = 'flex';
+        }
+
+        const dailyData = fechasDelPeriodo.map(fecha => ({
+            fecha,
+            total: montosPorFecha[fecha].reduce((sum, m) => sum + m.monto, 0)
+        }));
+
+        const diasRegistrados = dailyData.length;
+        const totalRecaudado = dailyData.reduce((sum, day) => sum + day.total, 0);
+        const promedioDiario = diasRegistrados > 0 ? totalRecaudado / diasRegistrados : 0;
+
+        let proyeccionHTML = '';
+        if (loggedInUser.tipo === 'Planta') {
+            const currentValorPorPunto = userData.divisor || 0; 
+            const daysInPeriod = ((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            
+            let valorPuntoProyectado = 0;
+            if (diasRegistrados > 0) {
+                valorPuntoProyectado = (currentValorPorPunto / diasRegistrados) * daysInPeriod;
+            }
+
+            proyeccionHTML = `
+            <div class="stat-card">
+                <span class="label">Valor por Punto (Proyectado)</span>
+                <span class="value projection">$${formatNumberWithPoints(valorPuntoProyectado)}</span>
+                <p class="disclaimer">*Estimación para el período completo.</p>
+            </div>`;
+        } else if (loggedInUser.tipo === 'Part Time') {
+            const diasTrabajadosEnPeriodo = (userData.diasTrabajados || []).filter(fecha => {
+                return fecha >= startDateString && fecha <= endDateString;
+            }).sort((a, b) => b.localeCompare(a));
+
+            if (diasTrabajadosEnPeriodo.length > 0) {
+                const pozoDelPeriodo = diasTrabajadosEnPeriodo.reduce((sum, fecha) => {
+                    return sum + (montosPorFecha[fecha] || []).reduce((s, m) => s + m.monto, 0);
+                }, 0);
+
+                const ultimoDiaTrabajado = diasTrabajadosEnPeriodo[0];
+                const divisorDelUltimoDia = divisoresDiariosExternos[ultimoDiaTrabajado] || 0;
+                const valorPorPuntoActual = divisorDelUltimoDia > 0 ? (pozoDelPeriodo / divisorDelUltimoDia) : 0;
+
+                proyeccionHTML = `
+                <div class="stat-card">
+                    <span class="label">Valor por Punto (Actual)</span>
+                    <span class="value projection">$${formatNumberWithPoints(valorPorPuntoActual)}</span>
+                    <p class="disclaimer">*Calculado con los días trabajados en este período.</p>
+                </div>`;
+            }
+        }
+
+
+        statCardsContainer.innerHTML = `
+            <div class="stat-card">
+                <span class="label">Total Recaudado (Período)</span>
+                <span class="value">$${formatNumberWithPoints(totalRecaudado)}</span>
+            </div>
+            <div class="stat-card">
+                <span class="label">Días Registrados (Período)</span>
+                <span class="value">${diasRegistrados}</span>
+            </div>
+            <div class="stat-card">
+                <span class="label">Promedio por Día</span>
+                <span class="value">$${formatNumberWithPoints(promedioDiario)}</span>
+            </div>
+            ${proyeccionHTML}
+        `;
+
+        renderTipChart(dailyData, view);
+    }
+
+    function renderTipChart(dailyData, view) {
+        const ctx = document.getElementById('tipChart').getContext('2d');
+        if (tipChart) {
+            tipChart.destroy();
+        }
+
+        let chartData;
+        if (view === 'weekly') {
+            const weeklyData = dailyData.reduce((acc, day) => {
+                const date = new Date(day.fecha + 'T00:00:00');
+                const weekStart = new Date(date.setDate(date.getDate() - date.getDay() + 1)).toISOString().split('T')[0];
+                if (!acc[weekStart]) {
+                    acc[weekStart] = 0;
+                }
+                acc[weekStart] += day.total;
+                return acc;
+            }, {});
+            chartData = {
+                labels: Object.keys(weeklyData).map(d => `Sem. ${formatDate(d)}`),
+                values: Object.values(weeklyData)
+            };
+        } else { // daily view
+            chartData = {
+                labels: dailyData.map(d => formatDate(d.fecha).substring(0, 5)),
+                values: dailyData.map(d => d.total)
+            };
+        }
+
+        tipChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    label: 'Propina Recaudada',
+                    data: chartData.values,
+                    backgroundColor: 'rgba(0, 123, 255, 0.6)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value, index, values) {
+                                return '$' + formatNumberWithPoints(value);
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += '$' + formatNumberWithPoints(context.parsed.y);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    document.getElementById('dailyViewBtn').addEventListener('click', () => {
+        updateStatisticsUI('daily');
+        document.getElementById('dailyViewBtn').classList.add('active');
+        document.getElementById('weeklyViewBtn').classList.remove('active');
+    });
+
+    document.getElementById('weeklyViewBtn').addEventListener('click', () => {
+        updateStatisticsUI('weekly');
+        document.getElementById('weeklyViewBtn').classList.add('active');
+        document.getElementById('dailyViewBtn').classList.remove('active');
+    });
+
+    // --- Lógica de notas, notificaciones y comunicación ---
+    async function fetchFromNotasScript(params) {
+        const url = new URL(SCRIPT_URL_NOTAS);
+        Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+            return await response.json();
+        } catch (error) {
+            console.error('Error al conectar con el servidor de notas.', error);
+            return { status: 'error', message: error.message };
+        }
+    }
+
+    async function postToNotasScript(params, data) {
+        const url = new URL(SCRIPT_URL_NOTAS);
+        Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error(`Error de red: ${response.statusText}`);
+            return await response.json();
+        } catch (error) {
+            showToast('Error al enviar nota al servidor.', 'error');
+            return { status: 'error', message: error.message };
+        }
+    }
+    
+    function checkForUnread(notes) {
+        if (!loggedInUser) return;
+        const notificationFab = document.getElementById('notification-fab');
+        const notificationCount = document.getElementById('note-notification-count');
+        const lastReadTimestamp = parseInt(localStorage.getItem(`lastReadTimestamp_${loggedInUser.id}`), 10) || 0;
+        const unreadAdminNotes = notes.filter(note => note.autor.toLowerCase() === 'admin' && new Date(note.fecha).getTime() > lastReadTimestamp);
+        const unreadCount = unreadAdminNotes.length;
+        if (unreadCount > 0) {
+            notificationCount.textContent = unreadCount;
+            notificationFab.style.display = 'flex';
+        } else {
+            notificationFab.style.display = 'none';
+        }
+    }
+
+    function markNotesAsRead() {
+        if (!loggedInUser) return;
+        const adminNotes = allFetchedNotes.filter(note => note.autor.toLowerCase() === 'admin');
+        if (adminNotes.length === 0) return;
+        const latestAdminNoteTimestamp = Math.max(...adminNotes.map(note => new Date(note.fecha).getTime()));
+        localStorage.setItem(`lastReadTimestamp_${loggedInUser.id}`, latestAdminNoteTimestamp);
+        document.getElementById('notification-fab').style.display = 'none';
+    }
+
+    async function cargarNotas() {
+        if(!loggedInUser) return;
+        const container = document.getElementById('admin-notes-container');
+        const isInitialLoad = !container.querySelector('.note-card') && !container.querySelector('.loading-indicator');
+        if (isInitialLoad) {
+            container.innerHTML = `<div class="loading-indicator"><i class="fas fa-spinner fa-spin"></i><span>Cargando mensajes...</span></div>`;
+        }
+        const response = await fetchFromNotasScript({ action: 'getNotes' });
+        if (response.status === 'success' && response.data) {
+            allFetchedNotes = response.data;
+            renderizarNotas(allFetchedNotes);
+            checkForUnread(allFetchedNotes);
+        } else {
+            if (isInitialLoad) {
+                container.innerHTML = '<p>No se pudieron cargar las notas.</p>';
+            }
+            checkForUnread(allFetchedNotes);
+        }
+    }
+
+    function renderizarNotas(notes) {
+        const container = document.getElementById('admin-notes-container');
+        container.innerHTML = '';
+        if (notes.length === 0) {
+            container.innerHTML = '<p>No hay mensajes. ¡Sé el primero en escribir!</p>';
+            return;
+        }
+        const sortedNotes = [...notes].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
+        const currentUserFullName = `${loggedInUser.nombre} ${loggedInUser.apellido}`;
+        sortedNotes.forEach(note => {
+            const noteCard = document.createElement('div');
+            noteCard.className = 'note-card';
+            if (note.autor === currentUserFullName) {
+                noteCard.classList.add('user-note');
+            }
+            noteCard.innerHTML = `<div class="note-header">De: <span class="author">${note.autor}</span> el ${formatNoteDate(note.fecha)}</div><div class="note-body">${note.mensaje}</div>`;
+            container.appendChild(noteCard);
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function enviarRespuesta() {
+        if (!loggedInUser) return;
+        const messageInput = document.getElementById('responseMessage');
+        const message = messageInput.value.trim();
+        if (!message) {
+            showToast('Escribe un mensaje para enviar.', 'error');
+            return;
+        }
+
+        const sendButton = document.getElementById('sendResponseBtn');
+        if (sendButton.disabled) return;
+
+        sendButton.disabled = true;
+        sendButton.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Enviando...`;
+
+        try {
+            const authorName = `${loggedInUser.nombre} ${loggedInUser.apellido}`;
+            const response = await postToNotasScript({ action: 'addNote' }, { autor: authorName, mensaje: message });
+            
+            if (response.status === 'success') {
+                showToast('Respuesta enviada con éxito.');
+                messageInput.value = '';
+                cargarNotas();
+            } else {
+                showToast(response.message || 'No se pudo enviar la respuesta.', 'error');
+            }
+        } catch (error) {
+            console.error("Error al enviar la respuesta:", error);
+            showToast('Error de conexión al enviar la respuesta.', 'error');
+        } finally {
+            sendButton.disabled = false;
+            sendButton.innerHTML = 'Enviar Respuesta';
+        }
+    }
+
+    document.getElementById('notification-fab').addEventListener('click', () => {
+        activatePanel('notasSection');
+        markNotesAsRead();
+    });
+
+    // --- Inicialización de la aplicación ---
+    function initApp() {
+        if (!loggedInUser) return;
+        
+        // <-- CAMBIO 2: Cargar los divisores desde la caché ANTES de hacer cualquier cálculo.
+        divisoresDiariosExternos = JSON.parse(localStorage.getItem('cachedDivisores')) || {};
+        
+        // Configuración inicial de la UI
+        document.getElementById('titulo-retiro').textContent = `Retiro de Propina (${loggedInUser.tipo})`;
+        if (loggedInUser.tipo === 'Planta') {
+            document.getElementById('vistaPlanta').style.display = 'block';
+            document.getElementById('vistaPartTime').style.display = 'none';
+        } else {
+            document.getElementById('vistaPlanta').style.display = 'none';
+            document.getElementById('vistaPartTime').style.display = 'block';
+            renderCalendar(document.getElementById('calendar-container'));
+        }
+        const savedPanelId = localStorage.getItem('activePanel') || 'retirosPropinaSection';
+        activatePanel(savedPanelId);
+        document.getElementById('importarDesdeSheetsBtn').addEventListener('click', () => importarDesdeSheets(false));
+        document.getElementById('sendResponseBtn').addEventListener('click', enviarRespuesta);
+        ['addAnticipoMontoInput', 'editAnticipoMontoInput', 'divisorPTInput'].forEach(id => setupNumericInputFormatting(document.getElementById(id)));
+
+        // --- LÓGICA DE CARGA RÁPIDA MEJORADA ---
+
+        // 1. Carga y muestra los datos locales INMEDIATAMENTE.
+        // Ahora incluye los divisores para Part Time, asegurando un cálculo inicial correcto.
+        console.log("Paso 1: Cargando datos desde caché local (incluyendo divisores) para visualización inmediata.");
+        cargarYMostrarMontos();
+        actualizarCalculoRetiro();
+        
+        // 2. Inicia la sincronización en segundo plano y carga de notas.
+        console.log("Paso 2: Iniciando sincronización en segundo plano con los servidores.");
+        showToast("Sincronizando datos...", "info");
+        cargarNotas(); 
+
+        (async () => {
+            await importarDesdeSheets(true);
+            if(loggedInUser.tipo === 'Planta') {
+                await obtenerYActualizarValorPorPuntoExterno();
+            }
+            await obtenerDivisoresExternos(true); // Esta función ahora guarda en caché.
+
+            // 3. Al terminar la sincronización, actualiza la UI con los datos frescos.
+            console.log("Paso 3: Sincronización completada. Refrescando la interfaz.");
+            showToast("¡Datos actualizados!");
+            cargarYMostrarMontos();
+            actualizarCalculoRetiro();
+
+        })();
+
+        // 4. Inicia los intervalos de actualización periódica.
+        if (notesInterval) clearInterval(notesInterval);
+        notesInterval = setInterval(cargarNotas, 15000); 
+        
+        if (sheetsInterval) clearInterval(sheetsInterval);
+        sheetsInterval = setInterval(() => {
+            (async () => {
+                await importarDesdeSheets(true);
+                if(loggedInUser.tipo === 'Planta') {
+                   await obtenerYActualizarValorPorPuntoExterno();
+                }
+                await obtenerDivisoresExternos(true);
+                actualizarCalculoRetiro();
+            })();
+        }, 15000); 
+    }
+
+    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('service-worker.js').then(reg => console.log('SW registered.')).catch(err => console.log('SW registration failed: ', err)); }); }
+    
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+    checkLogin();
+});
+</script>
+
+</body>
+</html>
